@@ -29,9 +29,9 @@ body {
 
 /* ── Environment indicators ──────────────────────────── */
 body.env-development {
-  --color-bg: #fff; /* dark green tint */
+  --color-bg: red; /* dark green tint */
 }
 
 body.env-production {
-  --color-bg: #111; /* original dark */
+  --color-bg: yellow; /* original dark */
 }

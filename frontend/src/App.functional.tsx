@@ -17,6 +17,8 @@ function App() {
     deleteTodo,
     editTodo,
     clearCompleted,
+    loading,
+    error,
   } = useTodos()
 
   return (
@@ -27,6 +29,9 @@ function App() {
 
       <main className="app__main">
         <AddTodo onAdd={addTodo} />
+
+        {error && <p className="app__error">{error}</p>}
+        {loading && <p className="app__loading">Loading todos...</p>}
 
         <TodoList
           todos={filteredTodos}

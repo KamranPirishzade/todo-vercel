@@ -25,6 +25,18 @@
   overflow: hidden;
 }
 
+/* ── Status ─────────────────────────────────────────── */
+.app__loading,
+.app__error {
+  padding: 12px 16px;
+  font-size: 0.85rem;
+  color: var(--color-text-muted);
+}
+
+.app__error {
+  color: rgba(175, 47, 47, 0.8);
+}
+
 /* ── Footer ─────────────────────────────────────────── */
 .app__footer {
   display: flex;

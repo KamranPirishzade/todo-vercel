@@ -1,0 +1,148 @@
+openapi: 3.0.3
+info:
+  title: Todo API
+  version: 1.0.0
+  description: REST API for managing todos, backed by PostgreSQL.
+servers:
+  - url: /api
+tags:
+  - name: Todos
+paths:
+  /todos:
+    get:
+      tags: [Todos]
+      summary: List todos
+      parameters:
+        - in: query
+          name: filter
+          schema:
+            type: string
+            enum: [all, active, completed]
+          required: false
+      responses:
+        '200':
+          description: List of todos
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Todo'
+    post:
+      tags: [Todos]
+      summary: Create a todo
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/NewTodo'
+      responses:
+        '201':
+          description: Created todo
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Todo'
+        '400':
+          description: Validation error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+  /todos/clear-completed:
+    delete:
+      tags: [Todos]
+      summary: Delete all completed todos
+      responses:
+        '204':
+          description: Completed todos deleted
+  /todos/{id}:
+    patch:
+      tags: [Todos]
+      summary: Update a todo (edit text and/or toggle completed)
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/UpdateTodo'
+      responses:
+        '200':
+          description: Updated todo
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Todo'
+        '404':
+          description: Todo not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+    delete:
+      tags: [Todos]
+      summary: Delete a todo
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: integer
+      responses:
+        '204':
+          description: Todo deleted
+        '404':
+          description: Todo not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+components:
+  schemas:
+    Todo:
+      type: object
+      properties:
+        id:
+          type: integer
+        text:
+          type: string
+        completed:
+          type: boolean
+        createdAt:
+          type: string
+          format: date-time
+        updatedAt:
+          type: string
+          format: date-time
+      required: [id, text, completed]
+    NewTodo:
+      type: object
+      properties:
+        text:
+          type: string
+          minLength: 1
+          maxLength: 200
+      required: [text]
+    UpdateTodo:
+      type: object
+      properties:
+        text:
+          type: string
+          minLength: 1
+          maxLength: 200
+        completed:
+          type: boolean
+      description: At least one of text or completed must be provided.
+    Error:
+      type: object
+      properties:
+        error:
+          type: string
+      required: [error]

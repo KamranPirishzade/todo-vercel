@@ -73,10 +73,9 @@ describe('App', () => {
     // TODO: assert 'Pending task' is visible, 'Finished task' is not
   })
 
-  it('persists todos to localStorage', async () => {
+  it('persists a new todo through the API', async () => {
     const user = userEvent.setup()
     // TODO: add 'Persist me'
-    // TODO: parse localStorage.getItem('todos')
-    // TODO: assert stored[0].text === 'Persist me'
+    // TODO: assert 'Persist me' is in the document (it now comes back from the backend, not localStorage)
   })
 })

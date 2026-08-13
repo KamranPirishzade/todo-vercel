@@ -1,111 +1,160 @@
-import { renderHook, act } from '@testing-library/react'
+import { renderHook, act, waitFor } from '@testing-library/react'
+import { vi } from 'vitest'
 import useTodos from './useTodos'
+import { todoApi } from '../services/todoApi'
+
+vi.mock('../services/todoApi', () => ({
+  todoApi: {
+    list: vi.fn(),
+    create: vi.fn(),
+    update: vi.fn(),
+    remove: vi.fn(),
+    clearCompleted: vi.fn(),
+  },
+}))
+
+const mockedApi = vi.mocked(todoApi)
+
+let nextId = 1
+function makeTodo(text: string, completed = false) {
+  return { id: nextId++, text, completed }
+}
+
+async function renderLoadedTodos() {
+  const hook = renderHook(() => useTodos())
+  await waitFor(() => expect(hook.result.current.loading).toBe(false))
+  return hook
+}
 
 describe('useTodos', () => {
   beforeEach(() => {
-    localStorage.clear()
+    nextId = 1
+    vi.resetAllMocks()
+    mockedApi.list.mockResolvedValue([])
   })
 
-  it('starts with empty todos', () => {
-    const { result } = renderHook(() => useTodos())
+  it('starts with empty todos after loading', async () => {
+    const { result } = await renderLoadedTodos()
     expect(result.current.todos).toEqual([])
     expect(result.current.activeCount).toBe(0)
   })
 
-  it('addTodo appends a new todo', () => {
-    const { result } = renderHook(() => useTodos())
-    act(() => result.current.addTodo('Buy milk'))
+  it('addTodo appends the todo returned by the API', async () => {
+    const { result } = await renderLoadedTodos()
+    mockedApi.create.mockResolvedValue(makeTodo('Buy milk'))
+
+    await act(async () => {
+      await result.current.addTodo('Buy milk')
+    })
+
+    expect(mockedApi.create).toHaveBeenCalledWith('Buy milk')
     expect(result.current.todos).toHaveLength(1)
     expect(result.current.todos[0].text).toBe('Buy milk')
     expect(result.current.todos[0].completed).toBe(false)
   })
 
-  it('addTodo trims whitespace', () => {
-    const { result } = renderHook(() => useTodos())
-    act(() => result.current.addTodo('  spaces  '))
-    expect(result.current.todos[0].text).toBe('spaces')
+  it('addTodo trims whitespace before calling the API', async () => {
+    const { result } = await renderLoadedTodos()
+    mockedApi.create.mockResolvedValue(makeTodo('spaces'))
+
+    await act(async () => {
+      await result.current.addTodo('  spaces  ')
+    })
+
+    expect(mockedApi.create).toHaveBeenCalledWith('spaces')
   })
 
-  it('addTodo assigns unique incrementing ids', () => {
-    const { result } = renderHook(() => useTodos())
-    act(() => result.current.addTodo('First'))
-    act(() => result.current.addTodo('Second'))
-    const ids = result.current.todos.map((t) => t.id)
-    expect(ids[0]).not.toBe(ids[1])
-  })
+  it('toggleTodo flips completed via the API', async () => {
+    const existing = makeTodo('Task')
+    mockedApi.list.mockResolvedValue([existing])
+    const { result } = await renderLoadedTodos()
+    mockedApi.update.mockResolvedValue({ ...existing, completed: true })
 
-  it('toggleTodo flips completed', () => {
-    const { result } = renderHook(() => useTodos())
-    act(() => result.current.addTodo('Task'))
-    const id = result.current.todos[0].id
-    act(() => result.current.toggleTodo(id))
+    await act(async () => {
+      await result.current.toggleTodo(existing.id)
+    })
+
+    expect(mockedApi.update).toHaveBeenCalledWith(existing.id, { completed: true })
     expect(result.current.todos[0].completed).toBe(true)
-    act(() => result.current.toggleTodo(id))
-    expect(result.current.todos[0].completed).toBe(false)
   })
 
-  it('deleteTodo removes the todo', () => {
-    const { result } = renderHook(() => useTodos())
-    act(() => result.current.addTodo('Task'))
-    const id = result.current.todos[0].id
-    act(() => result.current.deleteTodo(id))
+  it('deleteTodo removes the todo once the API confirms', async () => {
+    const existing = makeTodo('Task')
+    mockedApi.list.mockResolvedValue([existing])
+    const { result } = await renderLoadedTodos()
+    mockedApi.remove.mockResolvedValue(undefined)
+
+    await act(async () => {
+      await result.current.deleteTodo(existing.id)
+    })
+
+    expect(mockedApi.remove).toHaveBeenCalledWith(existing.id)
     expect(result.current.todos).toHaveLength(0)
   })
 
-  it('editTodo updates text', () => {
-    const { result } = renderHook(() => useTodos())
-    act(() => result.current.addTodo('Old text'))
-    const id = result.current.todos[0].id
-    act(() => result.current.editTodo(id, 'New text'))
+  it('editTodo updates text via the API', async () => {
+    const existing = makeTodo('Old text')
+    mockedApi.list.mockResolvedValue([existing])
+    const { result } = await renderLoadedTodos()
+    mockedApi.update.mockResolvedValue({ ...existing, text: 'New text' })
+
+    await act(async () => {
+      await result.current.editTodo(existing.id, 'New text')
+    })
+
+    expect(mockedApi.update).toHaveBeenCalledWith(existing.id, { text: 'New text' })
     expect(result.current.todos[0].text).toBe('New text')
   })
 
-  it('clearCompleted removes only completed todos', () => {
-    const { result } = renderHook(() => useTodos())
-    act(() => result.current.addTodo('Active'))
-    act(() => result.current.addTodo('Done'))
-    const doneId = result.current.todos[1].id
-    act(() => result.current.toggleTodo(doneId))
-    act(() => result.current.clearCompleted())
+  it('clearCompleted removes only completed todos once the API confirms', async () => {
+    const active = makeTodo('Active')
+    const done = makeTodo('Done', true)
+    mockedApi.list.mockResolvedValue([active, done])
+    const { result } = await renderLoadedTodos()
+    mockedApi.clearCompleted.mockResolvedValue(undefined)
+
+    await act(async () => {
+      await result.current.clearCompleted()
+    })
+
+    expect(mockedApi.clearCompleted).toHaveBeenCalled()
     expect(result.current.todos).toHaveLength(1)
     expect(result.current.todos[0].text).toBe('Active')
   })
 
-  it('activeCount counts only incomplete todos', () => {
-    const { result } = renderHook(() => useTodos())
-    act(() => result.current.addTodo('A'))
-    act(() => result.current.addTodo('B'))
-    act(() => result.current.toggleTodo(result.current.todos[0].id))
+  it('activeCount counts only incomplete todos', async () => {
+    mockedApi.list.mockResolvedValue([makeTodo('A'), makeTodo('B', true)])
+    const { result } = await renderLoadedTodos()
     expect(result.current.activeCount).toBe(1)
   })
 
   describe('filtering', () => {
-    it('filter=all returns all todos', () => {
-      const { result } = renderHook(() => useTodos())
-      act(() => result.current.addTodo('A'))
-      act(() => result.current.addTodo('B'))
-      act(() => result.current.toggleTodo(result.current.todos[0].id))
+    it('filter=all returns all todos', async () => {
+      mockedApi.list.mockResolvedValue([makeTodo('A'), makeTodo('B', true)])
+      const { result } = await renderLoadedTodos()
       expect(result.current.filteredTodos).toHaveLength(2)
     })
 
-    it('filter=active returns only incomplete', () => {
-      const { result } = renderHook(() => useTodos())
-      act(() => result.current.addTodo('A'))
-      act(() => result.current.addTodo('B'))
-      act(() => result.current.toggleTodo(result.current.todos[0].id))
+    it('filter=active returns only incomplete', async () => {
+      mockedApi.list.mockResolvedValue([makeTodo('A'), makeTodo('B', true)])
+      const { result } = await renderLoadedTodos()
       act(() => result.current.setFilter('active'))
       expect(result.current.filteredTodos).toHaveLength(1)
       expect(result.current.filteredTodos[0].completed).toBe(false)
     })
 
-    it('filter=completed returns only completed', () => {
-      const { result } = renderHook(() => useTodos())
-      act(() => result.current.addTodo('A'))
-      act(() => result.current.addTodo('B'))
-      act(() => result.current.toggleTodo(result.current.todos[0].id))
+    it('filter=completed returns only completed', async () => {
+      mockedApi.list.mockResolvedValue([makeTodo('A'), makeTodo('B', true)])
+      const { result } = await renderLoadedTodos()
       act(() => result.current.setFilter('completed'))
       expect(result.current.filteredTodos).toHaveLength(1)
       expect(result.current.filteredTodos[0].completed).toBe(true)
     })
+  })
+
+  it('surfaces an error message when loading todos fails', async () => {
+    mockedApi.list.mockRejectedValue(new Error('Network error'))
+    const { result } = await renderLoadedTodos()
+    expect(result.current.error).toBe('Network error')
   })
 })

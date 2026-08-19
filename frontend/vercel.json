@@ -1,0 +1,7 @@
+{
+  "rewrites": [
+    { "source": "/api-docs", "destination": "https://todo-vercel-production.up.railway.app/api-docs" },
+    { "source": "/api-docs/:path*", "destination": "https://todo-vercel-production.up.railway.app/api-docs/:path*" },
+    { "source": "/api/:path*", "destination": "https://todo-vercel-production.up.railway.app/api/:path*" }
+  ]
+}

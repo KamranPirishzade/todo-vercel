@@ -4,33 +4,62 @@ info:
   version: 1.0.0
   description: REST API for managing todos, backed by PostgreSQL.
 servers:
-  - url: /api
+  - url: /
+security: []
 tags:
   - name: Todos
+    description: CRUD operations on todo items.
+  - name: Health
+    description: Service liveness check.
 paths:
-  /todos:
+  /health:
+    get:
+      tags: [Health]
+      summary: Health check
+      operationId: healthCheck
+      responses:
+        '200':
+          description: Service is up
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HealthStatus'
+  /api/todos:
     get:
       tags: [Todos]
       summary: List todos
+      operationId: listTodos
+      description: Filtering and sorting are applied server-side; the response only contains todos matching `filter`, ordered per `sort`.
       parameters:
         - in: query
           name: filter
           schema:
             type: string
             enum: [all, active, completed]
+            default: all
           required: false
+        - in: query
+          name: sort
+          schema:
+            type: string
+            enum: [alphabetical, status]
+          required: false
+          description: Alphabetical sorts by text; status sorts incomplete todos first. Defaults to insertion order (by id) when omitted.
       responses:
         '200':
-          description: List of todos
+          description: List of todos matching the given filter/sort
           content:
             application/json:
               schema:
                 type: array
                 items:
                   $ref: '#/components/schemas/Todo'
+        '400':
+          $ref: '#/components/responses/BadRequest'
     post:
       tags: [Todos]
       summary: Create a todo
+      operationId: createTodo
       requestBody:
         required: true
         content:
@@ -45,28 +74,23 @@ paths:
               schema:
                 $ref: '#/components/schemas/Todo'
         '400':
-          description: Validation error
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/Error'
-  /todos/clear-completed:
+          $ref: '#/components/responses/BadRequest'
+  /api/todos/clear-completed:
     delete:
       tags: [Todos]
       summary: Delete all completed todos
+      operationId: clearCompletedTodos
+      description: Idempotent — succeeds even if no todos are currently completed.
       responses:
         '204':
-          description: Completed todos deleted
-  /todos/{id}:
+          description: Completed todos deleted (or none existed)
+  /api/todos/{id}:
     patch:
       tags: [Todos]
       summary: Update a todo (edit text and/or toggle completed)
+      operationId: updateTodo
       parameters:
-        - in: path
-          name: id
-          required: true
-          schema:
-            type: integer
+        - $ref: '#/components/parameters/TodoId'
       requestBody:
         required: true
         content:
@@ -80,48 +104,67 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/Todo'
+        '400':
+          $ref: '#/components/responses/BadRequest'
         '404':
-          description: Todo not found
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/Error'
+          $ref: '#/components/responses/NotFound'
     delete:
       tags: [Todos]
       summary: Delete a todo
+      operationId: deleteTodo
       parameters:
-        - in: path
-          name: id
-          required: true
-          schema:
-            type: integer
+        - $ref: '#/components/parameters/TodoId'
       responses:
         '204':
           description: Todo deleted
+        '400':
+          $ref: '#/components/responses/BadRequest'
         '404':
-          description: Todo not found
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/Error'
+          $ref: '#/components/responses/NotFound'
 components:
+  parameters:
+    TodoId:
+      in: path
+      name: id
+      description: The todo's numeric database id.
+      required: true
+      schema:
+        type: integer
+        minimum: 1
+  responses:
+    BadRequest:
+      description: Request failed validation (bad query/path/body value)
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/Error'
+    NotFound:
+      description: No todo exists with the given id
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/Error'
   schemas:
     Todo:
       type: object
       properties:
         id:
           type: integer
+          readOnly: true
         text:
           type: string
+          maxLength: 200
         completed:
           type: boolean
         createdAt:
           type: string
           format: date-time
+          readOnly: true
         updatedAt:
           type: string
           format: date-time
-      required: [id, text, completed]
+          readOnly: true
+      required: [id, text, completed, createdAt, updatedAt]
     NewTodo:
       type: object
       properties:
@@ -140,9 +183,19 @@ components:
         completed:
           type: boolean
       description: At least one of text or completed must be provided.
+      minProperties: 1
+    HealthStatus:
+      type: object
+      properties:
+        status:
+          type: string
+          enum: [ok]
+      required: [status]
     Error:
       type: object
       properties:
         error:
           type: string
       required: [error]
+      example:
+        error: 'text: text must not be empty'

@@ -26,12 +26,3 @@ body {
   color: var(--color-text);
   min-height: 100vh;
 }
-
-/* ── Environment indicators ──────────────────────────── */
-body.env-development {
-  --color-bg: white; /* dark green tint */
-}
-
-body.env-production {
-  --color-bg: yellow; /* original dark */
-}

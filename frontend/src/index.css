@@ -29,7 +29,7 @@ body {
 
 /* ── Environment indicators ──────────────────────────── */
 body.env-development {
-  --color-bg: red; /* dark green tint */
+  --color-bg: white; /* dark green tint */
 }
 
 body.env-production {

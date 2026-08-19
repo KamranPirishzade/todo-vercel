@@ -19,12 +19,17 @@
   z-index: 1000;
 }
 
-.env-badge--dev {
+.env-badge--local {
   background: #fef3c7;
   color: #92400e;
 }
 
-.env-badge--prod {
+.env-badge--preview {
+  background: #dbeafe;
+  color: #1e40af;
+}
+
+.env-badge--production {
   background: #d1fae5;
   color: #065f46;
 }

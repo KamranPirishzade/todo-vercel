@@ -5,6 +5,8 @@ import TodoFilter from './components/TodoFilter/TodoFilter.functional'
 import useTodos from './hooks/useTodos'
 import './App.css'
 
+const environment = import.meta.env.VITE_VERCEL_ENV ?? 'local'
+
 function App() {
   const {
     todos,
@@ -25,9 +27,7 @@ function App() {
 
   return (
     <div className="app">
-      <span className={`env-badge env-badge--${import.meta.env.DEV ? 'dev' : 'prod'}`}>
-        {import.meta.env.DEV ? 'DEV' : 'PROD'}
-      </span>
+      <span className={`env-badge env-badge--${environment}`}>{environment}</span>
 
       <header className="app__header">
         <h1 className="app__title">todos</h1>

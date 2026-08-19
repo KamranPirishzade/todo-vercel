@@ -1,4 +1,4 @@
-import React, { useState } from 'react'
+import React from 'react'
 import TodoItem from '../TodoItem/TodoItem.functional'
 import { Todo, SortType } from '../../types'
 
@@ -9,23 +9,21 @@ const SORT_OPTIONS: { value: SortType; label: string }[] = [
 
 interface TodoListProps {
   todos: Todo[]
+  sortBy: SortType
+  onSortChange: (sort: SortType) => void
   onToggle: (id: number) => void
   onDelete: (id: number) => void
   onEdit: (id: number, text: string) => void
 }
 
-function TodoList({ todos, onToggle, onDelete, onEdit }: TodoListProps) {
-  const [sortBy, setSortBy] = useState<SortType>('alphabetical')
-
-  const getSortedTodos = (): Todo[] => {
-    if (sortBy === 'status') {
-      return [...todos].sort((a, b) => Number(a.completed) - Number(b.completed))
-    }
-    return [...todos].sort((a, b) => a.text.localeCompare(b.text))
-  }
-
-  const sortedTodos = getSortedTodos()
-
+function TodoList({
+  todos,
+  sortBy,
+  onSortChange,
+  onToggle,
+  onDelete,
+  onEdit,
+}: TodoListProps) {
   return (
     <div className="todo-list-wrapper">
       <div className="todo-list__toolbar">
@@ -34,18 +32,18 @@ function TodoList({ todos, onToggle, onDelete, onEdit }: TodoListProps) {
           <button
             key={value}
             className={`todo-list__sort-btn${sortBy === value ? ' todo-list__sort-btn--active' : ''}`}
-            onClick={() => setSortBy(value)}
+            onClick={() => onSortChange(value)}
           >
             {label}
           </button>
         ))}
       </div>
 
-      {sortedTodos.length === 0 ? (
+      {todos.length === 0 ? (
         <p className="todo-list__empty">No tasks here.</p>
       ) : (
         <ul className="todo-list">
-          {sortedTodos.map((todo) => (
+          {todos.map((todo) => (
             <TodoItem
               key={todo.id}
               todo={todo}

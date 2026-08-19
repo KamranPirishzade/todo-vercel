@@ -12,6 +12,8 @@ function App() {
     activeCount,
     filter,
     setFilter,
+    sort,
+    setSort,
     addTodo,
     toggleTodo,
     deleteTodo,
@@ -35,6 +37,8 @@ function App() {
 
         <TodoList
           todos={filteredTodos}
+          sortBy={sort}
+          onSortChange={setSort}
           onToggle={toggleTodo}
           onDelete={deleteTodo}
           onEdit={editTodo}

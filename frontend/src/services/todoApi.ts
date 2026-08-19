@@ -1,6 +1,7 @@
-import { FilterType, Todo } from '../types'
+import { FilterType, SortType, Todo } from '../types'
 
-const API_URL = import.meta.env.VITE_API_URL ?? 'http://localhost:4000/api'
+const DEFAULT_API_URL = 'http://localhost:4000/api'
+const API_URL = import.meta.env.VITE_API_URL ?? DEFAULT_API_URL
 
 async function request<T>(path: string, init?: RequestInit): Promise<T> {
   const res = await fetch(`${API_URL}${path}`, {
@@ -21,9 +22,12 @@ async function request<T>(path: string, init?: RequestInit): Promise<T> {
 }
 
 export const todoApi = {
-  list(filter: FilterType = 'all'): Promise<Todo[]> {
-    const query = filter === 'all' ? '' : `?filter=${filter}`
-    return request<Todo[]>(`/todos${query}`)
+  list(filter: FilterType = 'all', sort?: SortType): Promise<Todo[]> {
+    const params = new URLSearchParams()
+    if (filter !== 'all') params.set('filter', filter)
+    if (sort) params.set('sort', sort)
+    const query = params.toString()
+    return request<Todo[]>(`/todos${query ? `?${query}` : ''}`)
   },
 
   create(text: string): Promise<Todo> {

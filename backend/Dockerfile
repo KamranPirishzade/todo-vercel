@@ -15,4 +15,4 @@ COPY --from=build /app/dist ./dist
 COPY --from=build /app/prisma ./prisma
 COPY --from=build /app/node_modules/.prisma ./node_modules/.prisma
 EXPOSE 4000
-CMD ["sh", "-c", "npx prisma migrate deploy && node dist/server.js"]
+CMD ["sh", "-c", "echo BEFORE_MIGRATE; npx prisma migrate deploy; echo MIGRATE_EXIT=$?; echo BEFORE_NODE; node dist/server.js; echo NODE_EXIT=$?"]

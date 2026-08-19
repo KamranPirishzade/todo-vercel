@@ -1,5 +1,6 @@
 import type { NextFunction, Request, Response } from 'express'
-import { Prisma } from '@prisma/client'
+import { HttpStatus } from '../constants/httpStatus.js'
+import { ErrorMessages } from '../constants/messages.js'
 import { HttpError } from './httpError.js'
 
 export function errorHandler(
@@ -13,11 +14,8 @@ export function errorHandler(
     return
   }
 
-  if (err instanceof Prisma.PrismaClientKnownRequestError && err.code === 'P2025') {
-    res.status(404).json({ error: 'Resource not found' })
-    return
-  }
-
   console.error(err)
-  res.status(500).json({ error: 'Internal server error' })
+  res
+    .status(HttpStatus.INTERNAL_SERVER_ERROR)
+    .json({ error: ErrorMessages.INTERNAL_SERVER_ERROR })
 }

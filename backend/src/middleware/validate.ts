@@ -1,5 +1,6 @@
 import type { NextFunction, Request, Response } from 'express'
 import type { ZodTypeAny } from 'zod'
+import { HttpStatus } from '../constants/httpStatus.js'
 import { HttpError } from './httpError.js'
 
 type Source = 'body' | 'query' | 'params'
@@ -11,7 +12,7 @@ export function validate(schema: ZodTypeAny, source: Source = 'body') {
       const message = result.error.issues
         .map((issue) => `${issue.path.join('.') || source}: ${issue.message}`)
         .join('; ')
-      next(new HttpError(400, message))
+      next(new HttpError(HttpStatus.BAD_REQUEST, message))
       return
     }
     req[source] = result.data

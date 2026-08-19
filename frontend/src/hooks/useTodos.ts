@@ -1,23 +1,44 @@
 import { useEffect, useState } from 'react'
-import { FilterType, Todo } from '../types'
+import { FilterType, SortType, Todo } from '../types'
 import { todoApi } from '../services/todoApi'
+
+function toMessage(err: unknown, fallback: string): string {
+  return err instanceof Error ? err.message : fallback
+}
 
 function useTodos() {
   const [todos, setTodos] = useState<Todo[]>([])
+  const [filteredTodos, setFilteredTodos] = useState<Todo[]>([])
   const [filter, setFilter] = useState<FilterType>('all')
+  const [sort, setSort] = useState<SortType>('alphabetical')
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
 
   useEffect(() => {
     let cancelled = false
-    setLoading(true)
     todoApi
-      .list()
+      .list('all')
       .then((data) => {
         if (!cancelled) setTodos(data)
       })
       .catch((err: unknown) => {
-        if (!cancelled) setError(err instanceof Error ? err.message : 'Failed to load todos')
+        if (!cancelled) setError(toMessage(err, 'Failed to load todos'))
+      })
+    return () => {
+      cancelled = true
+    }
+  }, [])
+
+  useEffect(() => {
+    let cancelled = false
+    setLoading(true)
+    todoApi
+      .list(filter, sort)
+      .then((data) => {
+        if (!cancelled) setFilteredTodos(data)
+      })
+      .catch((err: unknown) => {
+        if (!cancelled) setError(toMessage(err, 'Failed to load todos'))
       })
       .finally(() => {
         if (!cancelled) setLoading(false)
@@ -25,16 +46,25 @@ function useTodos() {
     return () => {
       cancelled = true
     }
-  }, [])
+  }, [filter, sort])
+
+  const refresh = async () => {
+    const [all, filtered] = await Promise.all([
+      todoApi.list('all'),
+      todoApi.list(filter, sort),
+    ])
+    setTodos(all)
+    setFilteredTodos(filtered)
+  }
 
   const addTodo = async (text: string) => {
     const trimmed = text.trim()
     if (!trimmed) return
     try {
-      const created = await todoApi.create(trimmed)
-      setTodos((prev) => [...prev, created])
+      await todoApi.create(trimmed)
+      await refresh()
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Failed to add todo')
+      setError(toMessage(err, 'Failed to add todo'))
     }
   }
 
@@ -42,19 +72,19 @@ function useTodos() {
     const target = todos.find((t) => t.id === id)
     if (!target) return
     try {
-      const updated = await todoApi.update(id, { completed: !target.completed })
-      setTodos((prev) => prev.map((t) => (t.id === id ? updated : t)))
+      await todoApi.update(id, { completed: !target.completed })
+      await refresh()
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Failed to update todo')
+      setError(toMessage(err, 'Failed to update todo'))
     }
   }
 
   const deleteTodo = async (id: number) => {
     try {
       await todoApi.remove(id)
-      setTodos((prev) => prev.filter((t) => t.id !== id))
+      await refresh()
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Failed to delete todo')
+      setError(toMessage(err, 'Failed to delete todo'))
     }
   }
 
@@ -62,27 +92,21 @@ function useTodos() {
     const trimmed = newText.trim()
     if (!trimmed) return
     try {
-      const updated = await todoApi.update(id, { text: trimmed })
-      setTodos((prev) => prev.map((t) => (t.id === id ? updated : t)))
+      await todoApi.update(id, { text: trimmed })
+      await refresh()
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Failed to edit todo')
+      setError(toMessage(err, 'Failed to edit todo'))
     }
   }
 
   const clearCompleted = async () => {
     try {
       await todoApi.clearCompleted()
-      setTodos((prev) => prev.filter((t) => !t.completed))
+      await refresh()
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Failed to clear completed todos')
+      setError(toMessage(err, 'Failed to clear completed todos'))
     }
   }
-
-  const filteredTodos = todos.filter((t) => {
-    if (filter === 'active') return !t.completed
-    if (filter === 'completed') return t.completed
-    return true
-  })
 
   const activeCount = todos.filter((t) => !t.completed).length
 
@@ -92,6 +116,8 @@ function useTodos() {
     activeCount,
     filter,
     setFilter,
+    sort,
+    setSort,
     addTodo,
     toggleTodo,
     deleteTodo,

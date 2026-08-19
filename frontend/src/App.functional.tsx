@@ -25,6 +25,10 @@ function App() {
 
   return (
     <div className="app">
+      <span className={`env-badge env-badge--${import.meta.env.DEV ? 'dev' : 'prod'}`}>
+        {import.meta.env.DEV ? 'DEV' : 'PROD'}
+      </span>
+
       <header className="app__header">
         <h1 className="app__title">todos</h1>
       </header>

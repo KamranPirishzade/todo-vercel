@@ -4,6 +4,8 @@
   "type": "module",
   "scripts": {
     "dev": "tsx watch src/server.ts",
+    "dev:up": "docker compose -f ../docker-compose.yml up -d --wait && npm run prisma:deploy && npm run dev",
+    "dev:down": "docker compose -f ../docker-compose.yml down",
     "build": "tsc && node scripts/copy-assets.mjs",
     "start": "node dist/server.js",
     "prisma:generate": "prisma generate",

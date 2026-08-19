@@ -1,39 +1,35 @@
-import { prisma } from '../db/prisma.js'
-import type { Prisma } from '@prisma/client'
-
-type FilterType = 'all' | 'active' | 'completed'
-
-function whereForFilter(filter?: FilterType): Prisma.TodoWhereInput {
-  if (filter === 'active') return { completed: false }
-  if (filter === 'completed') return { completed: true }
-  return {}
-}
+import { HttpStatus } from '../constants/httpStatus.js'
+import { ErrorMessages } from '../constants/messages.js'
+import { todosRepository } from '../repositories/todos.repository.js'
+import { HttpError } from '../middleware/httpError.js'
+import type { FilterType, SortType } from '../types/todo.js'
 
 export const todosService = {
-  list(filter?: FilterType) {
-    return prisma.todo.findMany({
-      where: whereForFilter(filter),
-      orderBy: { id: 'asc' },
-    })
+  list(filter: FilterType, sort?: SortType) {
+    return todosRepository.findMany(filter, sort)
   },
 
   create(text: string) {
-    return prisma.todo.create({ data: { text } })
+    return todosRepository.create(text)
   },
 
-  update(id: number, data: { text?: string; completed?: boolean }) {
-    return prisma.todo.update({ where: { id }, data })
+  async update(id: number, data: { text?: string; completed?: boolean }) {
+    const existing = await todosRepository.findById(id)
+    if (!existing) {
+      throw new HttpError(HttpStatus.NOT_FOUND, ErrorMessages.TODO_NOT_FOUND)
+    }
+    return todosRepository.update(id, data)
   },
 
-  remove(id: number) {
-    return prisma.todo.delete({ where: { id } })
+  async remove(id: number) {
+    const existing = await todosRepository.findById(id)
+    if (!existing) {
+      throw new HttpError(HttpStatus.NOT_FOUND, ErrorMessages.TODO_NOT_FOUND)
+    }
+    await todosRepository.remove(id)
   },
 
   clearCompleted() {
-    return prisma.todo.deleteMany({ where: { completed: true } })
-  },
-
-  find(id: number) {
-    return prisma.todo.findUnique({ where: { id } })
+    return todosRepository.removeCompleted()
   },
 }
